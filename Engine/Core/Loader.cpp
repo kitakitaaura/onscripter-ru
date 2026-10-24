@@ -588,6 +588,19 @@ static bool initWithPath(const char *path, bool &hasArchivePath) {
 		path = ons.getPath(0);
 
 	char tmp_path[PATH_MAX];
+#ifdef __EMSCRIPTEN__
+	// The browser build's game folder is read-only, so ons.cfg lives in the
+	// directory given by ONS_CFG_DIR (next to the saves) instead.
+	const char *cfgDir = std::getenv("ONS_CFG_DIR");
+	if (cfgDir && ons.ons_cfg_path[0] == '\0') {
+		std::snprintf(ons.ons_cfg_path, PATH_MAX, "%s", cfgDir);
+		std::snprintf(tmp_path, PATH_MAX, "%s%s", cfgDir, CFG_FILE);
+		if (!FileIO::accessFile(tmp_path, FileType::File))
+			std::snprintf(tmp_path, PATH_MAX, "%s%s", path, DEFAULT_CFG_FILE);
+		if (FileIO::accessFile(tmp_path))
+			parseOptionFile(tmp_path, hasArchivePath);
+	}
+#endif
 	std::snprintf(tmp_path, PATH_MAX, "%s%s", path, CFG_FILE);
 	if (ons.ons_cfg_path[0] == '\0') {
 		if (FileIO::accessFile(tmp_path, FileType::File)) {

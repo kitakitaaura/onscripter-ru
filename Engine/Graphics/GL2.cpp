@@ -7,7 +7,7 @@
  *  Consult LICENSE file for licensing terms and copyright holders.
  */
 
-#if defined(MACOSX) || defined(LINUX) || defined(WIN32)
+#if (defined(MACOSX) || defined(LINUX) || defined(WIN32)) && !defined(__EMSCRIPTEN__)
 
 #if !defined(SDL_GPU_USE_EPOXY)
 #define SDL_GPU_USE_EPOXY 1

@@ -33,7 +33,9 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_gpu.h>
+#ifndef __EMSCRIPTEN__
 #include <smpeg2/smpeg.h>
+#endif
 #include <unistd.h>
 
 #include <string>

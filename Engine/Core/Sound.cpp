@@ -347,6 +347,7 @@ int ONScripter::playSound(const char *filename, int format, bool loop_flag, int 
 				SDL_AudioSpec wanted = audio_format;
 				bool change_spec     = false;
 
+#ifndef __EMSCRIPTEN__
 				if (mtype == MUS_MP3) {
 					SMPEG *mp3_chk = SMPEG_new_rwops(SDL_RWFromMem(m_buf, static_cast<int>(m_len)), nullptr, 0, 0);
 					SMPEG_wantedSpec(mp3_chk, &wanted);
@@ -355,6 +356,7 @@ int ONScripter::playSound(const char *filename, int format, bool loop_flag, int 
 					    (wanted.format != audio_format.format))
 						change_spec = true;
 				}
+#endif
 
 				if (mtype == MUS_OGG) {
 					OVInfo *ovi = new OVInfo();

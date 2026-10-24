@@ -7,6 +7,9 @@
  *  Consult LICENSE file for licensing terms and copyright holders.
  */
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/threading.h>
+#endif
 #include "Engine/Core/ONScripter.hpp"
 #include "Engine/Components/Async.hpp"
 #include "Engine/Components/Joystick.hpp"
@@ -15,6 +18,7 @@
 
 #ifdef LINUX
 #include <sys/types.h>
+#include <algorithm>
 #include <sys/wait.h>
 #endif
 
@@ -214,7 +218,13 @@ void ONScripter::fetchEventsToQueue() {
 	auto event = std::make_unique<SDL_Event>();
 	std::unique_ptr<SDL_Event> tmp_event;
 
-	while (SDL_WaitEventTimeout(event.get(), 1)) {
+#ifdef __EMSCRIPTEN__
+	// SDL polls here in 1ms steps; 4ms is still imperceptible input latency.
+	const int eventWaitMs = 4;
+#else
+	const int eventWaitMs = 1;
+#endif
+	while (SDL_WaitEventTimeout(event.get(), eventWaitMs)) {
 		// ignore continuous SDL_MOUSEMOTION
 		while (event->type == SDL_MOUSEMOTION) {
 			if (!tmp_event)
@@ -353,9 +363,16 @@ void ONScripter::waitEvent(int count, bool nopPreferred) {
 			// we still have time, do some downtime processing
 			bool processed{mainThreadDowntimeProcessing(false)};
 			// if we're way ahead of schedule (defined here as more than 5ms), let's have a little nap so we don't destroy everyone's CPU
+#ifdef __EMSCRIPTEN__
+			// Sleeping is cheap and precise enough in a worker: sleep until the
+			// frame is due rather than busy-waiting its last 5ms (~30% of a core).
+			if (!processed)
+				SDL_Delay(std::max<unsigned int>(1, timeThisFrame - (ticksNow - lastFlipTime)));
+#else
 			if (!processed && ((ticksNow - lastFlipTime) + 5 <= timeThisFrame)) {
 				SDL_Delay(1);
 			}
+#endif
 		}
 
 		if (allow_rendering && !(skip_mode & SKIP_SUPERSKIP) && !deferredLoadingEnabled) {
@@ -375,6 +392,11 @@ void ONScripter::waitEvent(int count, bool nopPreferred) {
 		// We still must invoke this on many platforms to prevent "not responding" issues.
 		// On droid it is not necessary and it additionally breaks background app handling in Android_PumpEvents
 		SDL_PollEvent(nullptr);
+#endif
+#ifdef __EMSCRIPTEN__
+		// Browser input callbacks are queued to this thread, which never
+		// returns to its event loop: run them here so SDL sees the events.
+		emscripten_current_thread_process_queued_calls();
 #endif
 
 		if (show_fps_counter && !(skip_mode & SKIP_SUPERSKIP)) {

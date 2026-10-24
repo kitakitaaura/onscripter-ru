@@ -43,7 +43,25 @@ int DialogueController::ownDeinit() {
 
 // ----------------------- functions related to processing, parsing, execution -----------------------------
 
+// noberu: each dialogue and its speaker (UTF-8), for its reading tools. The
+// engine runs on a pthread here, so the page hears about it on the main
+// thread; the copy is made before this call returns.
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/threading.h>
+#endif
+static std::string noberuName;
+static void noberuSay(const std::string &text) {
+#ifdef __EMSCRIPTEN__
+	if (text.empty()) return;
+	MAIN_THREAD_EM_ASM({
+		if (Module.noberuText) Module.noberuText(HEAPU8.slice($0, $0 + $1), HEAPU8.slice($2, $2 + $3));
+	}, text.data(), (int)text.size(), noberuName.data(), (int)noberuName.size());
+#endif
+}
+
 void DialogueController::setDialogueName(const char *buf) {
+	noberuName = buf ? buf : "";
 	std::u16string name;
 	decodeUTF8String(buf, name);
 	if (dialogueName != name) {
@@ -64,6 +82,7 @@ void DialogueController::feedDialogueTextData(const char *dataStr) {
 	} else {
 		dataPart = dataStr;
 	}
+	noberuSay(dataStr);
 	textPart = "";
 	setDialogueActive();
 }

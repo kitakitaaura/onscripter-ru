@@ -1532,8 +1532,19 @@ int ONScripter::rumbleCommand() {
 	return RET_CONTINUE;
 }
 
+#ifdef __EMSCRIPTEN__
+extern "C" void ons_web_relaunch(); // web/web_glue.cpp
+#endif
+
 int ONScripter::relaunchCommand() {
 	sendToLog(LogLevel::Info, "Relaunching...\n");
+#ifdef __EMSCRIPTEN__
+	// A page cannot exec itself: flush the config and saves, then let the
+	// host page start a fresh engine.
+	cleanLabel();
+	ctrl.deinit();
+	ons_web_relaunch();
+#endif
 	cleanLabel();
 	ctrl.deinit();
 

@@ -504,7 +504,7 @@ public:
 	static constexpr size_t GlobalImagePoolSize{20};
 #endif
 
-#if defined(DROID) || defined(IOS)
+#if defined(DROID) || defined(IOS) || defined(__EMSCRIPTEN__)
 	GPURendererInfo renderers[2]{
 	    {"GLES2",
 	     &GPUController::makeRendererIdGLES2,
